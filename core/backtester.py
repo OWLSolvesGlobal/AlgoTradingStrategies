@@ -3,6 +3,7 @@ from core.data_loader import run_eda, save_raw_data_as_csv, save_processed_data
 from core.trading_env import TradingEnvironment
 from core.mt5_connector import connect_to_mt5, disconnect_from_mt5, fetch_historical_data
 import MetaTrader5 as mt5
+from numba import njit  # Ensure numba is imported for downstream modules
 
 def run_bactest_live(symbols=["GBPJPY", "XAUUSD", "GBPCHF"], 
                                 timeframes=[ 

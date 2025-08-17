@@ -1,13 +1,31 @@
 import matplotlib.pyplot as plt
+import numpy as np
+from numba import njit
 
 class SMACrossover:
     def __init__(self, fast: int=50, slow: int=200):
         self.fast = fast
         self.slow = slow
         
+    @staticmethod
+    @njit
+    def _generate_signals_numba(fast_sma, slow_sma):
+        n = len(fast_sma)
+        signal = np.zeros(n, dtype=np.int8)
+        for i in range(n):
+            if np.isnan(fast_sma[i]) or np.isnan(slow_sma[i]):
+                signal[i] = 0
+            elif fast_sma[i] > slow_sma[i]:
+                signal[i] = 1
+            elif fast_sma[i] < slow_sma[i]:
+                signal[i] = -1
+            else:
+                signal[i] = 0
+        return signal
+
     def generate_signals(self, data_dict):
         """
-        Generate buy/sell signals for multiple currency pairs and timeframes.
+        Generate buy/sell signals for multiple currency pairs and timeframes using numba for speed.
         :param data_dict: Nested dict {symbol: {timeframe: DataFrame}}
         :return: Nested dict {symbol: {timeframe: DataFrame with signals}}
         """
@@ -25,11 +43,13 @@ class SMACrossover:
                 df['close_lag2'] = df['close'].shift(2)
                 df['hour'] = df.index.hour
                 df['dayofweek'] = df.index.dayofweek
-                # Signal Generation
-                df['signal'] = 0
-                df.loc[df['fast_sma'] > df['slow_sma'], 'signal'] = 1
-                df.loc[df['fast_sma'] < df['slow_sma'], 'signal'] = -1
-                df['position'] = df['signal'].shift(1).fillna(0)
+                # Signal Generation with numba
+                fast_sma = df['fast_sma'].values
+                slow_sma = df['slow_sma'].values
+                signal = SMACrossover._generate_signals_numba(fast_sma, slow_sma)
+                df['signal'] = signal
+                df['position'] = np.roll(signal, 1)
+                df.loc[df.index[0], 'position'] = 0  # Safe assignment by label       
                 results[symbol][timeframe] = df
         return results
     
