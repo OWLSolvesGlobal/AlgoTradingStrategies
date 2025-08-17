@@ -2,6 +2,43 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 class TradingEnvironment:
+    def overall_strategy_returns(self):
+        """
+        Aggregate and display overall strategy returns across all symbols and timeframes.
+        Returns a summary DataFrame for further analysis or visualization.
+        """
+        summary = []
+        for symbol, tf_dict in self.results.items():
+            for timeframe, result in tf_dict.items():
+                equity_curve = result["equity_curve"]
+                if not equity_curve:
+                    continue
+                equity_series = pd.Series([val for _, val in equity_curve])
+                returns = equity_series.pct_change().dropna()
+                total_return = (equity_series.iloc[-1] / equity_series.iloc[0]) - 1
+                max_drawdown = ((equity_series.cummax() - equity_series) / equity_series.cummax()).max()
+                sharpe = (returns.mean() / returns.std()) * (252 * 24 * 4) ** 0.5 if returns.std() != 0 else float('nan')
+                summary.append({
+                    "symbol": symbol,
+                    "timeframe": timeframe,
+                    "total_return": total_return,
+                    "max_drawdown": max_drawdown,
+                    "sharpe": sharpe,
+                    "final_value": result["final_value"]
+                })
+        summary_df = pd.DataFrame(summary)
+        print("\n=== Overall Strategy Returns Summary ===")
+        print(summary_df)
+        # Optionally plot aggregate returns
+        if not summary_df.empty:
+            plt.figure(figsize=(10, 5))
+            plt.bar(summary_df["symbol"] + "_" + summary_df["timeframe"].astype(str), summary_df["total_return"])
+            plt.title("Total Return by Symbol/Timeframe")
+            plt.ylabel("Total Return")
+            plt.xticks(rotation=45)
+            plt.grid(True)
+            plt.show()
+        return summary_df
     def __init__(self, strategy, data_dict, cash=1000):
         self.strategy = strategy
         self.data_dict = data_dict  # Nested dict {symbol: {timeframe: DataFrame}}
@@ -90,6 +127,7 @@ class TradingEnvironment:
         plt.show()
 
     def evaluate_performance(self):
+        metrics = []
         for symbol, tf_dict in self.results.items():
             for timeframe, result in tf_dict.items():
                 equity_curve = result["equity_curve"]
@@ -105,3 +143,12 @@ class TradingEnvironment:
                 print(f"  Total Return: {total_return:.2%}")
                 print(f"  Max Drawdown: {max_drawdown:.2%}")
                 print(f"  Sharpe Ratio: {sharpe:.2f}")
+                metrics.append({
+                    "symbol": symbol,
+                    "timeframe": timeframe,
+                    "total_return": total_return,
+                    "max_drawdown": max_drawdown,
+                    "sharpe": sharpe,
+                    "final_value": result["final_value"]
+                })
+        return pd.DataFrame(metrics)

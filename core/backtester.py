@@ -1,5 +1,5 @@
 from strategies.sma_crossover import SMACrossover
-from core.data_loader import run_eda, save_raw_data_as_csv
+from core.data_loader import run_eda, save_raw_data_as_csv, save_processed_data
 from core.trading_env import TradingEnvironment
 from core.mt5_connector import connect_to_mt5, disconnect_from_mt5, fetch_historical_data
 import MetaTrader5 as mt5
@@ -16,8 +16,12 @@ def run_bactest_live(symbols=["GBPJPY", "XAUUSD", "GBPCHF"],
     run_eda(data)  # EDA and cleaning
     save_raw_data_as_csv(data) # saving unprocessed data
     strategy = SMACrossover(fast=50, slow=200)
-    env = TradingEnvironment(strategy=strategy, data_dict=data)
-    results = env.run()
+
+    processed_data = strategy.generate_signals(data)
+    save_processed_data(processed_data)  # saving processed data with features and signals
+
+    env = TradingEnvironment(strategy=strategy, data_dict=processed_data)
+    env.run()
 
     print("\n📊 Trade Log:")
     for symbol, tf_dict in env.results.items():
@@ -28,3 +32,4 @@ def run_bactest_live(symbols=["GBPJPY", "XAUUSD", "GBPCHF"],
 
     # Evaluate performance metrics
     env.evaluate_performance()
+    env.overall_strategy_returns()

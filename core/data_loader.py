@@ -1,3 +1,19 @@
+# Utility to save processed data after signal generation
+import os
+def save_processed_data(processed_data, base_folder="data/processed"):
+    """
+    Save processed DataFrames to CSV files in data/processed/<symbol>/<timeframe>.csv
+    :param processed_data: Nested dict {symbol: {timeframe: DataFrame}}
+    :param base_folder: Base folder to save processed data
+    """
+    for symbol, tf_dict in processed_data.items():
+        symbol_folder = os.path.join(base_folder, symbol)
+        os.makedirs(symbol_folder, exist_ok=True)
+        for timeframe, df in tf_dict.items():
+            filename = f"{timeframe}.csv"
+            filepath = os.path.join(symbol_folder, filename)
+            df.to_csv(filepath)
+            print(f"Saved processed data for {symbol} {timeframe} to {filepath}")
 import os
 import pandas as pd
 import numpy as np
